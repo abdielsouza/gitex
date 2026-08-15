@@ -1,0 +1,210 @@
+<Layouts.app flash={@flash}>
+  <div class="w-full space-y-6 px-3 py-6 sm:px-6 lg:px-8">
+    <div class="flex flex-col w-full gap-4 md:flex-row md:items-center md:justify-between">
+      <div class="min-w-0">
+        <p class="text-xs font-semibold uppercase tracking-[0.35em] text-primary">GitEx</p>
+        <h1 class="mt-2 break-words text-2xl font-bold tracking-tight text-base-content sm:text-3xl">Pipeline dashboard</h1>
+      </div>
+      <div class="flex flex-wrap items-center gap-3">
+        <a href={~p"/"} class="btn btn-ghost">Início</a>
+        <button type="button" phx-click="clear_cache" class="btn btn-outline btn-sm">Limpar cache</button>
+        <div class={[
+          "badge gap-2",
+          @pipeline_running && "badge-warning",
+          !@pipeline_running && "badge-success"
+        ]}>
+          <span class="size-2 rounded-full bg-current"></span>
+          {if @pipeline_running, do: "Executando", else: "Pronta"}
+        </div>
+      </div>
+    </div>
+
+    <div class="card border border-base-300 bg-base-100 shadow-sm">
+      <div class="card-body p-4 sm:p-6 lg:p-8">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div class="min-w-0">
+            <h2 class="text-lg font-semibold text-base-content">Executar pipeline</h2>
+            <p class="mt-1 break-words text-sm text-base-content/70">Informe repositórios, usuários e organizações para executar a coleta em tempo real.</p>
+          </div>
+        </div>
+
+        <.form for={@pipeline_form} id="pipeline-form" phx-submit="run_pipeline" class="mt-6 space-y-5">
+          <div class="grid gap-5 md:grid-cols-3 lg:gap-6">
+            <div class="min-w-0">
+              <.input
+                field={@pipeline_form[:repositories]}
+                type="textarea"
+                label="Repositórios"
+                rows="6"
+                placeholder="ex: phoenixframework/phoenix, elixir-lang/elixir"
+              />
+            </div>
+            <div class="min-w-0">
+              <.input
+                field={@pipeline_form[:users]}
+                type="textarea"
+                label="Usuários"
+                rows="6"
+                placeholder="ex: josevalim, chrismccord"
+              />
+            </div>
+            <div class="min-w-0">
+              <.input
+                field={@pipeline_form[:organizations]}
+                type="textarea"
+                label="Organizações"
+                rows="6"
+                placeholder="ex: elixir-lang, github"
+              />
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end">
+            <button type="submit" class="btn btn-primary" phx-disable-with="Executando...">
+              Executar pipeline
+            </button>
+          </div>
+        </.form>
+      </div>
+    </div>
+
+    <div class="card border border-base-300 bg-base-100 shadow-sm">
+      <div class="card-body p-4 sm:p-6 lg:p-8">
+        <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+          <h2 class="text-lg font-semibold text-base-content">Filtros</h2>
+          <p class="text-sm text-base-content/70">{if @dashboard.language_filter != "" or @dashboard.owner_filter != "", do: "Filtro ativo", else: "Sem filtro"}</p>
+        </div>
+
+        <.form for={@filter_form} id="filter-form" phx-submit="apply_filters" phx-change="apply_filters" class="mt-6 space-y-4">
+          <div class="grid gap-4 md:grid-cols-3 lg:gap-6">
+            <div class="min-w-0">
+              <.input field={@filter_form[:language]} type="text" label="Linguagem" placeholder="JavaScript" />
+            </div>
+            <div class="min-w-0">
+              <.input field={@filter_form[:owner]} type="text" label="Owner" placeholder="github" />
+            </div>
+            <div class="min-w-0">
+              <.input
+                field={@filter_form[:limit]}
+                type="select"
+                label="Limite de itens"
+                options={[{"5", "5"}, {"10", "10"}, {"15", "15"}]}
+              />
+            </div>
+          </div>
+        </.form>
+      </div>
+    </div>
+
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4 lg:gap-5">
+      <.metric_card title="Repositorios" value={format_number(@dashboard.total_repositories)} subtitle="carregados" />
+      <.metric_card title="Estrelas" value={format_number(@dashboard.total_stars)} subtitle="acumuladas" />
+      <.metric_card title="Forks" value={format_number(@dashboard.total_forks)} subtitle="total" />
+      <.metric_card title="Linguagens" value={format_number(@dashboard.unique_languages)} subtitle="únicas" />
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-[1.3fr_0.7fr] 2xl:grid-cols-[2fr_1fr]">
+      <div class="card border border-base-300 bg-base-100 shadow-sm">
+        <div class="card-body p-4 sm:p-6 lg:p-8">
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <h2 class="text-lg font-semibold text-base-content">Métricas da pipeline</h2>
+            <div class="badge badge-info">{format_number(@pipeline_snapshot.loaded)} carregados</div>
+          </div>
+
+          <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div class="rounded-xl bg-base-200/60 p-4">
+              <p class="text-xs uppercase tracking-wide text-base-content/60">Descobertos</p>
+              <p class="mt-2 break-words text-2xl font-bold">{format_number(@pipeline_snapshot.discovered)}</p>
+            </div>
+            <div class="rounded-xl bg-base-200/60 p-4">
+              <p class="text-xs uppercase tracking-wide text-base-content/60">Extraídos</p>
+              <p class="mt-2 break-words text-2xl font-bold">{format_number(@pipeline_snapshot.extracted)}</p>
+            </div>
+            <div class="rounded-xl bg-base-200/60 p-4">
+              <p class="text-xs uppercase tracking-wide text-base-content/60">Transformados</p>
+              <p class="mt-2 break-words text-2xl font-bold">{format_number(@pipeline_snapshot.transformed)}</p>
+            </div>
+            <div class="rounded-xl bg-base-200/60 p-4">
+              <p class="text-xs uppercase tracking-wide text-base-content/60">Falhas</p>
+              <p class="mt-2 break-words text-2xl font-bold">{format_number(@pipeline_snapshot.failed)}</p>
+            </div>
+          </div>
+
+          <div class="mt-6 grid gap-4 sm:grid-cols-3 lg:gap-5">
+            <div class="rounded-xl border border-base-300 p-4">
+              <p class="text-xs uppercase tracking-wide text-base-content/60">Tempo</p>
+              <p class="mt-2 break-words text-xl font-bold">{format_number(@pipeline_snapshot.elapsed_ms)} ms</p>
+            </div>
+            <div class="rounded-xl border border-base-300 p-4">
+              <p class="text-xs uppercase tracking-wide text-base-content/60">Taxa</p>
+              <p class="mt-2 break-words text-xl font-bold">{format_number(@pipeline_snapshot.repos_per_second)} /s</p>
+            </div>
+            <div class="rounded-xl border border-base-300 p-4">
+              <p class="text-xs uppercase tracking-wide text-base-content/60">Última atualização</p>
+              <p class="mt-2 break-words text-xl font-bold">{format_datetime(@dashboard.latest_updated)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border border-base-300 bg-base-100 shadow-sm">
+        <div class="card-body p-4 sm:p-6 lg:p-8">
+          <h2 class="text-lg font-semibold text-base-content">Resumo do armazém</h2>
+
+          <div class="mt-6 space-y-4">
+            <div class="rounded-xl bg-base-200/60 p-4">
+              <p class="text-xs uppercase tracking-wide text-base-content/60">Observadores</p>
+              <p class="mt-2 break-words text-2xl font-bold">{format_number(@dashboard.total_watchers)}</p>
+            </div>
+            <div class="rounded-xl bg-base-200/60 p-4">
+              <p class="text-xs uppercase tracking-wide text-base-content/60">Issues abertas</p>
+              <p class="mt-2 break-words text-2xl font-bold">{format_number(@dashboard.total_issues)}</p>
+            </div>
+            <div class="rounded-xl bg-base-200/60 p-4">
+              <p class="text-xs uppercase tracking-wide text-base-content/60">Owners únicos</p>
+              <p class="mt-2 break-words text-2xl font-bold">{format_number(@dashboard.unique_owners)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid gap-6 lg:grid-cols-2 lg:gap-7">
+      <div class="card min-w-0 border border-base-300 bg-base-100 shadow-sm">
+        <div class="card-body p-4 sm:p-6 lg:p-8">
+          <h2 class="text-lg font-semibold text-base-content">Top linguagens</h2>
+          <div class="mt-6">
+            <.bar_chart items={@dashboard.top_languages} badge_class="badge badge-primary badge-sm" bar_class="bg-primary" />
+          </div>
+        </div>
+      </div>
+
+      <div class="card min-w-0 border border-base-300 bg-base-100 shadow-sm">
+        <div class="card-body p-4 sm:p-6 lg:p-8">
+          <h2 class="text-lg font-semibold text-base-content">Top owners</h2>
+          <div class="mt-6">
+            <.bar_chart items={@dashboard.top_owners} badge_class="badge badge-secondary badge-sm" bar_class="bg-secondary" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border border-base-300 bg-base-100 shadow-sm">
+      <div class="card-body p-4 sm:p-6 lg:p-8">
+        <h2 class="text-lg font-semibold text-base-content">Eventos recentes</h2>
+        <div class="mt-6 space-y-3">
+          <%= for event <- @dashboard.last_events do %>
+            <div class="flex flex-col gap-2 rounded-xl bg-base-200/60 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <span class="break-words text-sm text-base-content/80">{event.message}</span>
+              <span class="text-xs text-base-content/50">{format_datetime(event.timestamp)}</span>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <footer class="flex w-full py-12 justify-center">
+      <p class="text-center">&copy; 2026 Abdiel Souza</p>
+    </footer>
+  </div>
+</Layouts.app>
